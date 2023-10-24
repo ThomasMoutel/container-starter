@@ -102,6 +102,16 @@ async function initDom(): Promise<void> {
 				...finalizeWindowOptions(),
 				saveWindowState: false
 			};
+			const monInfo = await fin.System.getMonitorInfo();
+			// console.log(`##ThMo## MonitorInfo: ${JSON.stringify(monInfo)}`);
+			if (monInfo.taskbar.edge === "top") {
+				previewOptions.defaultTop ||= 0;
+				previewOptions.defaultTop += monInfo.taskbar.dipRect.bottom;
+			}
+			if (monInfo.taskbar.edge === "left") {
+				previewOptions.defaultLeft ||= 0;
+				previewOptions.defaultLeft += monInfo.taskbar.dipRect.right;
+			}
 			previewWindow = await fin.Window.create(previewOptions);
 			await previewWindow.addListener("closed", () => {
 				previewWindow = undefined;
