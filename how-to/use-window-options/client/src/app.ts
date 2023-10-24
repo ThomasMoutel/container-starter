@@ -1,5 +1,63 @@
 import type OpenFin from "@openfin/core";
 
+/**
+ * Logs with prefix.
+ * @param message message content
+ */
+function _logThis(message: string): void {
+	console.log(`##ThMo## ${message}`);
+	// // eslint-disable-next-line no-alert
+	// alert(`##ThMo## ${message}`);
+}
+
+const app = fin.Application.getCurrentSync();
+app.on("window-auth-requested", async (event) => {
+	_logThis("window-auth-requested has been received...");
+	// Verify that proxy authentication is requested.
+	if (event.authInfo.isProxy) {
+		_logThis("proxy authentication required...");
+		_logThis(`host:${event.authInfo.host}, port:${event.authInfo.port}, realm:${event.authInfo.realm}, scheme:?${event.authInfo.scheme}`);
+		return fin.Window.wrap({ uuid: event.uuid, name: event.name })
+			.then(async (win) => {
+				_logThis("found the window...");
+				// TODO: prompt for proxy credentials
+				const proxyDialogContent = `Please enter credentials for ${event.authInfo.host}:${event.authInfo.port}:`;
+				// eslint-disable-next-line no-alert
+				alert(proxyDialogContent);
+				// hardcoded values for my local proxy
+				let PROXY_LOGIN = "";
+				let PROXY_PASSWORD = "";
+				if (event.authInfo.port === 3129) {
+					PROXY_LOGIN = "basic";
+					PROXY_PASSWORD = "basic";
+				}
+				else if (event.authInfo.port === 3130) {
+					PROXY_LOGIN = "digest";
+					PROXY_PASSWORD = "digest";
+				}
+				return win.authenticate(PROXY_LOGIN, PROXY_PASSWORD)
+					// eslint-disable-next-line promise/always-return, promise/no-nesting
+					.then(() => {
+						_logThis("authenticated");
+					})
+					// eslint-disable-next-line promise/no-nesting
+					.catch((err) => {
+						_logThis(`err: ${err}`);
+					});
+			})
+			.catch((err) => {
+				_logThis(`did not find the window... ${err}`);
+			});
+	}
+})
+	// eslint-disable-next-line promise/always-return
+	.then((value) => {
+		_logThis("Successfully registered to 'window-auth-requested'!");
+	})
+	.catch((err) => {
+		_logThis(`Could not register to 'window-auth-requested': ${err}`);
+	});
+
 const defaultCommonOptions: OpenFin.WindowCreationOptions = {
 	name: "test-child",
 	url: "./preview.html",
