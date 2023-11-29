@@ -5,57 +5,54 @@ import type OpenFin from "@openfin/core";
  * @param message message content
  */
 function _logThis(message: string): void {
-	console.log(`##ThMo## ${message}`);
-	// // eslint-disable-next-line no-alert
-	// alert(`##ThMo## ${message}`);
+	console.log(`[Proxy Auth] ${message}`);
 }
 
+const WINDOW_AUTH_REQUESTED_EVENT_NAME = "window-auth-requested";
+
 const app = fin.Application.getCurrentSync();
-app.on("window-auth-requested", async (event) => {
-	_logThis("window-auth-requested has been received...");
+app.on(WINDOW_AUTH_REQUESTED_EVENT_NAME, async (event) => {
 	// Verify that proxy authentication is requested.
 	if (event.authInfo.isProxy) {
-		_logThis("proxy authentication required...");
-		_logThis(`host:${event.authInfo.host}, port:${event.authInfo.port}, realm:${event.authInfo.realm}, scheme:?${event.authInfo.scheme}`);
+		_logThis(`'${WINDOW_AUTH_REQUESTED_EVENT_NAME}' has been received: proxy authentication required for ${JSON.stringify(event.authInfo)}`);
 		return fin.Window.wrap({ uuid: event.uuid, name: event.name })
 			.then(async (win) => {
-				_logThis("found the window...");
+				_logThis(`Requesting window: ${JSON.stringify(win.identity)}`);
 				// TODO: prompt for proxy credentials
-				const proxyDialogContent = `Please enter credentials for ${event.authInfo.host}:${event.authInfo.port}:`;
-				// eslint-disable-next-line no-alert
-				alert(proxyDialogContent);
 				// hardcoded values for my local proxy
 				let PROXY_LOGIN = "";
 				let PROXY_PASSWORD = "";
 				if (event.authInfo.port === 3129) {
 					PROXY_LOGIN = "basic";
 					PROXY_PASSWORD = "basic";
-				}
-				else if (event.authInfo.port === 3130) {
+				} else if (event.authInfo.port === 3130) {
 					PROXY_LOGIN = "digest";
 					PROXY_PASSWORD = "digest";
 				}
+				const proxyDialogContent = `Using credentials for '${event.authInfo.host}:${event.authInfo.port}': ${PROXY_LOGIN}/${PROXY_PASSWORD}`;
+				// eslint-disable-next-line no-alert
+				alert(proxyDialogContent);
 				return win.authenticate(PROXY_LOGIN, PROXY_PASSWORD)
 					// eslint-disable-next-line promise/always-return, promise/no-nesting
 					.then(() => {
-						_logThis("authenticated");
+						_logThis("Authentication worked!");
 					})
 					// eslint-disable-next-line promise/no-nesting
 					.catch((err) => {
-						_logThis(`err: ${err}`);
+						_logThis(`Error: ${err}`);
 					});
 			})
 			.catch((err) => {
-				_logThis(`did not find the window... ${err}`);
+				_logThis(`Requesting window not found: ${err}`);
 			});
 	}
 })
 	// eslint-disable-next-line promise/always-return
 	.then((value) => {
-		_logThis("Successfully registered to 'window-auth-requested'!");
+		_logThis(`Successfully registered to '${WINDOW_AUTH_REQUESTED_EVENT_NAME}'!`);
 	})
 	.catch((err) => {
-		_logThis(`Could not register to 'window-auth-requested': ${err}`);
+		_logThis(`Could not register to '${WINDOW_AUTH_REQUESTED_EVENT_NAME}': ${err}`);
 	});
 
 const defaultCommonOptions: OpenFin.WindowCreationOptions = {
