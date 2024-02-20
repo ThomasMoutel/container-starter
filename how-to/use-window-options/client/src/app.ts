@@ -122,26 +122,26 @@ async function initDom(): Promise<void> {
 
 	const btnReset = document.querySelector("#btnReset");
 	if (btnReset) {
-		btnReset.addEventListener("click", () => {
+		btnReset.addEventListener("click", async () => {
 			selectedCommonOptions = { ...defaultCommonOptions };
 			selectedFramelessOptions = { ...defaultFramelessOptions };
 			selectedResizeRegion = { ...defaultResizeRegion };
 			selectedResizeRegionSides = { ...defaultResizeRegionSides };
 			selectedCornerRounding = { ...defaultCornerRounding };
 			populateForm();
-			updatePreview();
+			await updatePreview();
 		});
 	}
 
 	const btnCopy = document.querySelector("#btnCopy");
 	if (btnCopy) {
 		btnCopy.addEventListener("click", async () => {
-			await fin.Clipboard.writeText({ data: createPreview() });
+			await fin.Clipboard.writeText({ data: await createPreview() });
 		});
 	}
 
 	populateForm();
-	updatePreview();
+	await updatePreview();
 }
 
 /**
@@ -434,7 +434,8 @@ function finalizeWindowOptions(): OpenFin.WindowCreationOptions {
 	const finalWindowOptions: OpenFin.WindowCreationOptions = {
 		name: selectedCommonOptions.name,
 		url: selectedCommonOptions.url,
-		autoShow: selectedCommonOptions.autoShow
+		autoShow: selectedCommonOptions.autoShow,
+		hotkeys: [{ keys: "Ctrl+W", preventDefault: false }]
 	};
 
 	for (const prop of Object.keys(selectedCommonOptions) as (keyof OpenFin.WindowCreationOptions)[]) {
@@ -502,10 +503,10 @@ function finalizeWindowOptions(): OpenFin.WindowCreationOptions {
 /**
  * Update the preview.
  */
-function updatePreview(): void {
+async function updatePreview(): Promise<void> {
 	const previewElem = document.querySelector("#preview");
 	if (previewElem) {
-		previewElem.textContent = createPreview();
+		previewElem.textContent = await createPreview();
 	}
 }
 
@@ -513,6 +514,22 @@ function updatePreview(): void {
  * Create a preview.
  * @returns The preview code.
  */
-function createPreview(): string {
-	return `await fin.Window.create(${JSON.stringify(finalizeWindowOptions(), undefined, "  ")});`;
+async function createPreview(): Promise<string> {
+	return fin.Window.create({ name: "magicWin", hotkeys: [{ keys: "Ctrl+M" }] })
+		// eslint-disable-next-line arrow-body-style
+		.then(async (myMagicWindow) => {
+			return myMagicWindow.on("hotkey", async (hotkeyEvent) => {
+				console.log(`A hotkey was pressed in the magic window!: ${JSON.stringify(hotkeyEvent)}`);
+				if (hotkeyEvent.ctrlKey && hotkeyEvent.inputType === "keyUp" && hotkeyEvent.code === "KeyM") {
+					console.log("now closing...");
+					await myMagicWindow.close();
+				}
+			});
+		})
+		.catch((err) => console.error(`Error with hotkeys: ${err}`))
+		.then(() => {
+			console.log("coucou");
+			return `const win = await fin.Window.create(${JSON.stringify(finalizeWindowOptions(), undefined, "  ")});`;
+		}
+		);
 }
